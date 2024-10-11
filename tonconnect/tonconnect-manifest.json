@@ -1,0 +1,10 @@
+{
+    "name": "Crypto Hryvnia",
+    "url": "https://hryvnia-5.onrender.com"
+    "icon": "https://i.ibb.co/712Bg0T/IMG-3959.png"
+    "theme_color": "#FFFFFF",
+    "background_color": "#FFFFFF",
+    "description": "Your app description",
+    "version": "1.0",
+    "permissions": ["wallet"]
+}
