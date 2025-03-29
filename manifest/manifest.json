@@ -1,7 +1,15 @@
 {
-    "url": "https://t.me/XpayTONbot",
-    "name": "Xpay",
-    "iconUrl": "https://i.ibb.co/SX1NsKxR/pay.png",
-    "termsOfUseUrl": "https://ton.org/terms",
-    "privacyPolicyUrl": "https://ton.org/privacy"
+    "url": "https://hryvnia-5.onrender.com",
+    "name": "ApiXX",
+    "iconUrl": "https://i.ibb.co/G4BqFWDx/IMG-4790.jpg",
+    "termsOfUseUrl": "https://hryvnia-5.onrender.com/terms",
+    "privacyPolicyUrl": "https://hryvnia-5.onrender.com/privacy",
+    "actions": [
+        {
+            "method": "sendTransaction",
+            "label": "Створення NFT",
+            "description": "Створення нового NFT у додатку ApiXX",
+            "iconUrl": "https://i.ibb.co/G4BqFWDx/IMG-4790.jpg"
+        }
+    ]
 }
