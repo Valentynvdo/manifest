@@ -4,7 +4,7 @@ const bot = new TelegramBot(token, { polling: true });
 
 const projects = {};
 const MODERATOR_ID = '743820908';
-const APP_URL = "https://t.me/XpayTONbot; // Заміни на реальний URL фронтенду
+const APP_URL = "https://t.me/XpayTONbot"; 
 
 bot.onText(/\/start add_project_(.+)/, (msg, match) => {
     const userId = match[1];
