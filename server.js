@@ -6,7 +6,7 @@ const token = '7376652915:AAGqwHaHBRmxd6ZcCt9mmT_lg1kstFsgpj8';
 const bot = new TelegramBot(token);
 
 const WEBHOOK_PATH = '/bot';
-const WEBHOOK_URL = 'https://hryvnia-5.onrender.com' + WEBHOOK_PATH; // Замініть на ваш реальний URL від Render
+const WEBHOOK_URL = 'https://manifest-34oy.onrender.com' + WEBHOOK_PATH; // Замініть на ваш реальний URL від Render
 
 app.use(express.json());
 app.post(WEBHOOK_PATH, (req, res) => {
