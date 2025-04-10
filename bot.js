@@ -1,11 +1,10 @@
 const TelegramBot = require('node-telegram-bot-api');
-const token = '7376652915:AAGqwHaHBRmxd6ZcCt9mmT_lg1kstFsgpj8'; // Твій токен
+const token = '7376652915:AAGqwHaHBRmxd6ZcCt9mmT_lg1kstFsgpj8';
 const bot = new TelegramBot(token, { polling: true });
 
 const projects = {};
-const MODERATOR_ID = '743820908'; // Твій ID для модерації
-const APP_URL = "https://t.me/XpayTONbot"; // Заміни на URL фронтенду
-const API_URL = "https://hryvnia-5.onrender.com"; // Заміни на URL твого API
+const MODERATOR_ID = '743820908';
+const APP_URL = "https://t.me/XpayTONbot; // Заміни на реальний URL фронтенду
 
 bot.onText(/\/start add_project_(.+)/, (msg, match) => {
     const userId = match[1];
@@ -15,7 +14,8 @@ bot.onText(/\/start add_project_(.+)/, (msg, match) => {
         "Будь ласка, вкажіть назву вашого проекту (наприклад, 'My Cool Project'):");
 });
 
-bot.on('message', (msg) => {
+// Зробимо обробник асинхронним
+bot.on('message', async (msg) => {
     const userId = msg.from.id.toString();
     if (!projects[userId] || msg.text.startsWith('/')) return;
 
@@ -105,6 +105,7 @@ bot.on('message', (msg) => {
                 `Дата закінчення: ${projects[userId].expirationDate}\n` +
                 `Відправлено користувачем: ${projects[userId].submittedBy}`);
 
+            // Використовуємо await у асинхронній функції
             await saveCompanyToServer(projects[userId]);
             delete projects[userId];
             break;
@@ -127,7 +128,7 @@ bot.on('callback_query', async (query) => {
 
 async function saveCompanyToServer(company) {
     try {
-        const response = await fetch(`${API_URL}/api/save-company`, {
+        const response = await fetch('https://hryvnia-5.onrender.com/api/save-company', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(company)
