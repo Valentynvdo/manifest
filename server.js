@@ -3,7 +3,7 @@ const express = require('express');
 const fetch = require('node-fetch');
 
 const app = express();
-const token = '7376652915:AAGqwHaHBRmxd6ZcCt9mmT_lg1kstFsgpj8';
+const token = '7376652915:AAGqwHaHBRmxd6ZcCt9mmT_lg1kstFsgpj8'; // Рекомендується перенести до process.env.BOT_TOKEN
 const bot = new TelegramBot(token);
 const WEBHOOK_PATH = '/bot';
 const WEBHOOK_URL = 'https://manifest-34oy.onrender.com' + WEBHOOK_PATH;
@@ -25,7 +25,7 @@ const states = {};
 const languages = {};
 const TIMEOUT_MINUTES = 10;
 
-// Validation functions
+// Валідаційні функції
 const validateName = (name) => /^[a-zA-Z0-9\s\-_]{3,50}$/.test(name);
 const validateLink = (link) => /^(https?:\/\/|t\.me\/)[a-zA-Z0-9\/\-\_\.]+$/.test(link);
 const validateDescription = (desc) => desc.length >= 10 && desc.length <= 500;
@@ -40,7 +40,7 @@ const validateDate = (dateStr) => {
 };
 const validateContact = (contact) => /^[a-zA-Z0-9\s@\.]{3,50}$/.test(contact);
 
-// Localized messages
+// Локалізовані повідомлення
 const messages = {
     uk: {
         welcome: "👋 Вітаю! Ви розпочали створення нового проекту на XPAY Маркет.\n📌 Вкажіть назву вашого проекту (3-50 символів, лише літери, цифри, пробіли, -, _):",
@@ -66,7 +66,9 @@ const messages = {
         cancel: "❌ Процес створення проекту скасовано.",
         timeout: "⏰ Час очікування минув. Почніть заново за допомогою /start.",
         editPrompt: "✏️ Виберіть поле для редагування (name, link, description, reward, token, tokenReward, contact, image, category, expirationDate):",
-        langPrompt: "🌐 Оберіть мову:"
+        langPrompt: "🌐 Оберіть мову:",
+        sessionExists: "⚠️ У вас уже є активна сесія створення проекту. Завершіть її або скасуйте за допомогою кнопки 'Скасувати'.",
+        serverError: "❌ Виникла помилка при збереженні проекту. Спробуйте ще раз пізніше."
     },
     en: {
         welcome: "👋 Welcome! You’ve started creating a new project on XPAY Market.\n📌 Please provide the project name (3-50 characters, letters, numbers, spaces, -, _ only):",
@@ -92,11 +94,13 @@ const messages = {
         cancel: "❌ Project creation process canceled.",
         timeout: "⏰ Time limit exceeded. Start over with /start.",
         editPrompt: "✏️ Select a field to edit (name, link, description, reward, token, tokenReward, contact, image, category, expirationDate):",
-        langPrompt: "🌐 Please choose your language:"
+        langPrompt: "🌐 Please choose your language:",
+        sessionExists: "⚠️ You already have an active project creation session. Complete it or cancel it using the 'Cancel' button.",
+        serverError: "❌ An error occurred while saving the project. Please try again later."
     }
 };
 
-// Language selection command
+// Команда вибору мови
 bot.onText(/\/lang/, (msg) => {
     const userId = msg.from.id.toString();
     bot.sendMessage(msg.chat.id, messages.en.langPrompt, {
@@ -109,12 +113,18 @@ bot.onText(/\/lang/, (msg) => {
     });
 });
 
-// Start project creation
+// Початок створення проекту
 bot.onText(/\/start add_project_(.+)/, (msg, match) => {
     const userId = match[1];
+    if (projects[userId]) {
+        const lang = languages[userId] || 'uk';
+        bot.sendMessage(msg.chat.id, messages[lang].sessionExists);
+        return;
+    }
     projects[userId] = { telegramAccountId: userId };
     states[userId] = { step: 'language', lastActivity: Date.now() };
 
+    console.log(`Нова сесія для userId: ${userId}`);
     bot.sendMessage(msg.chat.id, messages.en.langPrompt, {
         reply_markup: {
             inline_keyboard: [
@@ -125,7 +135,7 @@ bot.onText(/\/start add_project_(.+)/, (msg, match) => {
     });
 });
 
-// Handle text and photo messages
+// Обробка текстових повідомлень і фото
 bot.on('message', async (msg) => {
     const userId = msg.from.id.toString();
     if (!projects[userId] || !states[userId] || msg.text?.startsWith('/')) return;
@@ -133,6 +143,8 @@ bot.on('message', async (msg) => {
     const state = states[userId];
     const lang = languages[userId] || 'uk';
     state.lastActivity = Date.now();
+
+    console.log(`Повідомлення від ${userId}, крок: ${state.step}, текст: ${msg.text || 'фото'}`);
 
     switch (state.step) {
         case 'name':
@@ -218,7 +230,7 @@ bot.on('message', async (msg) => {
                             [{ text: "Airdrop", callback_data: `category_${userId}_airdrop` }],
                             [{ text: "Task", callback_data: `category_${userId}_task` }],
                             [{ text: "Game", callback_data: `category_${userId}_game` }],
-                            [{ text: "🚫 Скасувати / Cancel", callback_data: `cancel_${userId}` }]
+                            [{ text: lang === 'uk' ? "🚫 Скасувати" : "🚫 Cancel", callback_data: `cancel_${userId}` }]
                         ]
                     }
                 });
@@ -226,6 +238,7 @@ bot.on('message', async (msg) => {
                 const fileId = msg.photo[msg.photo.length - 1].file_id;
                 const file = await bot.getFile(fileId);
                 projects[userId].image = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+                // TODO: Для продакшену розгляньте завантаження зображень на хмарне сховище (наприклад, AWS S3)
                 state.step = 'category';
                 bot.sendMessage(msg.chat.id, messages[lang].categoryPrompt, {
                     reply_markup: {
@@ -233,7 +246,7 @@ bot.on('message', async (msg) => {
                             [{ text: "Airdrop", callback_data: `category_${userId}_airdrop` }],
                             [{ text: "Task", callback_data: `category_${userId}_task` }],
                             [{ text: "Game", callback_data: `category_${userId}_game` }],
-                            [{ text: "🚫 Скасувати / Cancel", callback_data: `cancel_${userId}` }]
+                            [{ text: lang === 'uk' ? "🚫 Скасувати" : "🚫 Cancel", callback_data: `cancel_${userId}` }]
                         ]
                     }
                 });
@@ -260,18 +273,20 @@ bot.on('message', async (msg) => {
                 return;
             }
             state.step = field;
-            bot.sendMessage(msg.chat.id, messages[lang][`${field}Prompt`] || `Please provide a new value for ${field}:`, getCancelButton(userId));
+            bot.sendMessage(msg.chat.id, messages[lang][`${field}Prompt`] || `Вкажіть нове значення для ${field}:`, getCancelButton(userId));
             break;
     }
 });
 
-// Handle callback queries
+// Обробка callback-запитів
 bot.on('callback_query', async (query) => {
     const [action, userId, value] = query.data.split('_');
     if (!projects[userId] || !states[userId]) return;
 
     const lang = languages[userId] || 'uk';
     states[userId].lastActivity = Date.now();
+
+    console.log(`Callback від ${userId}: action=${action}, value=${value}`);
 
     if (action === 'lang') {
         languages[userId] = value;
@@ -281,13 +296,19 @@ bot.on('callback_query', async (query) => {
                 chat_id: query.message.chat.id,
                 message_id: query.message.message_id,
                 reply_markup: {
-                    inline_keyboard: [[{ text: "🚫 Скасувати / Cancel", callback_data: `cancel_${userId}` }]]
+                    inline_keyboard: [[{ text: lang === 'uk' ? "🚫 Скасувати" : "🚫 Cancel", callback_data: `cancel_${userId}` }]]
                 }
             });
         } else {
             bot.editMessageText(messages[value].langPrompt, {
                 chat_id: query.message.chat.id,
-                message_id: query.message.message_id
+                message_id: query.message.message_id,
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: "Українська", callback_data: `lang_${userId}_uk` }],
+                        [{ text: "English", callback_data: `lang_${userId}_en` }]
+                    ]
+                }
             });
         }
         return;
@@ -298,6 +319,7 @@ bot.on('callback_query', async (query) => {
             chat_id: query.message.chat.id,
             message_id: query.message.message_id
         });
+        console.log(`Сесія для ${userId} скасована`);
         delete projects[userId];
         delete states[userId];
         delete languages[userId];
@@ -311,9 +333,10 @@ bot.on('callback_query', async (query) => {
             chat_id: query.message.chat.id,
             message_id: query.message.message_id,
             reply_markup: {
-                inline_keyboard: [[{ text: "🚫 Скасувати / Cancel", callback_data: `cancel_${userId}` }]]
+                inline_keyboard: [[{ text: lang === 'uk' ? "🚫 Скасувати" : "🚫 Cancel", callback_data: `cancel_${userId}` }]]
             }
         });
+        return;
     }
 
     if (action === 'confirm') {
@@ -336,9 +359,11 @@ bot.on('callback_query', async (query) => {
 
             try {
                 await saveCompanyToServer(projects[userId]);
+                console.log(`Проект від ${userId} успішно збережено`);
             } catch (error) {
-                bot.sendMessage(userId, messages[lang].timeout);
-                bot.sendMessage(MODERATOR_ID, "❌ Error saving project from user " + userId);
+                console.error(`Помилка збереження проекту для ${userId}:`, error);
+                bot.sendMessage(userId, messages[lang].serverError);
+                bot.sendMessage(MODERATOR_ID, `❌ Помилка збереження проекту від користувача ${userId}`);
             }
 
             delete projects[userId];
@@ -356,6 +381,7 @@ bot.on('callback_query', async (query) => {
                 chat_id: query.message.chat.id,
                 message_id: query.message.message_id
             });
+            console.log(`Сесія для ${userId} скасована через підтвердження`);
             delete projects[userId];
             delete states[userId];
             delete languages[userId];
@@ -363,7 +389,7 @@ bot.on('callback_query', async (query) => {
     }
 });
 
-// Format project summary
+// Форматування підсумку проекту
 function formatProjectSummary(project, lang) {
     return `${lang === 'uk' ? 'Назва' : 'Name'}: ${project.name}\n` +
            `${lang === 'uk' ? 'Посилання' : 'Link'}: ${project.link}\n` +
@@ -377,7 +403,7 @@ function formatProjectSummary(project, lang) {
            `${lang === 'uk' ? 'Дата закінчення' : 'End date'}: ${project.expirationDate}`;
 }
 
-// Show confirmation
+// Показ підтвердження
 function showConfirmation(chatId, userId, lang) {
     bot.sendMessage(chatId, messages[lang].confirmPrompt.replace('{summary}', formatProjectSummary(projects[userId], lang)), {
         reply_markup: {
@@ -390,16 +416,17 @@ function showConfirmation(chatId, userId, lang) {
     });
 }
 
-// Cancel button
+// Кнопка скасування
 function getCancelButton(userId) {
+    const lang = languages[userId] || 'uk';
     return {
         reply_markup: {
-            inline_keyboard: [[{ text: "🚫 Скасувати / Cancel", callback_data: `cancel_${userId}` }]]
+            inline_keyboard: [[{ text: lang === 'uk' ? "🚫 Скасувати" : "🚫 Cancel", callback_data: `cancel_${userId}` }]]
         }
     };
 }
 
-// Save to server
+// Збереження на сервер
 async function saveCompanyToServer(company) {
     try {
         const response = await fetch('https://hryvnia-5.onrender.com/api/save-company', {
@@ -407,20 +434,21 @@ async function saveCompanyToServer(company) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(company)
         });
-        if (!response.ok) throw new Error('Failed to save');
+        if (!response.ok) throw new Error(`HTTP помилка: ${response.status}`);
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Помилка збереження:', error);
         throw error;
     }
 }
 
-// Timeout for inactive sessions
+// Таймер для очищення неактивних сесій
 setInterval(() => {
     const now = Date.now();
     for (const userId in states) {
         if (now - states[userId].lastActivity > TIMEOUT_MINUTES * 60 * 1000) {
             const lang = languages[userId] || 'uk';
             bot.sendMessage(userId, messages[lang].timeout);
+            console.log(`Сесія для ${userId} видалена через таймаут`);
             delete projects[userId];
             delete states[userId];
             delete languages[userId];
