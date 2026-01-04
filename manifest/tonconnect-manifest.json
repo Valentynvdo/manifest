@@ -1,10 +1,7 @@
 {
+  "url": "https://battle-nft.onrender.com",
   "name": "GemDex",
   "iconUrl": "https://i.postimg.cc/yNyLb97x/IMAGE_2025_12_24_14_23_26.jpg",
-  "url": "https://battle-nft.onrender.com",
-  "description": "NFT marketplace and game",
-  "permissions": ["ton_address"],
-  "categories": ["wallet"],
   "termsOfUseUrl": "https://ton.org/terms",
   "privacyPolicyUrl": "https://ton.org/privacy"
 }
